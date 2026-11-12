@@ -220,7 +220,7 @@ function ensureHeaders(sheet) {
             Agendemos nuestra sesión en la mejor fecha y hora para todos - Sondeo
           </h1>
           <p class="text-slate-300 text-xs sm:text-sm max-w-3xl">
-            Horario base de referencia: <strong>Ciudad de México (CDMX)</strong>. El sistema convierte automáticamente cada bloque de 2 horas a los husos horarios de <strong>Chile, Perú, Ecuador, Argentina y Costa Rica</strong>.
+            Horario base de referencia: <strong>Ciudad de México (CDMX)</strong>. El sistema convierte automáticamente cada bloque de 2 horas a los husos horarios de <strong>Chile, Perú, Ecuador, Colombia, Argentina y Costa Rica</strong>.
           </p>
         </div>
 
@@ -257,6 +257,10 @@ function ensureHeaders(sheet) {
         <div class="bg-white/5 rounded-xl px-3 py-2 border border-white/10">
           <div class="text-slate-300 font-semibold">🇪🇨 Ecuador (Quito)</div>
           <div id="clock-ec" class="font-mono text-sm font-semibold text-white mt-0.5">--:--</div>
+        </div>
+        <div class="bg-white/5 rounded-xl px-3 py-2 border border-white/10">
+          <div class="text-slate-300 font-semibold">🇨🇴 Colombia (Bogotá)</div>
+          <div id="clock-co" class="font-mono text-sm font-semibold text-white mt-0.5">--:--</div> 
         </div>
         <div class="bg-white/5 rounded-xl px-3 py-2 border border-white/10">
           <div class="text-slate-300 font-semibold">🇦🇷 Argentina (Bs.As.)</div>
@@ -859,6 +863,7 @@ function ensureHeaders(sheet) {
       { key: 'cl', label: '🇨🇱 Chile', tz: 'America/Santiago' },
       { key: 'pe', label: '🇵🇪 Perú', tz: 'America/Lima' },
       { key: 'ec', label: '🇪🇨 Ecuador', tz: 'America/Guayaquil' },
+      { key: 'co', name:  '🇨🇴 Colombia', tz: 'America/Bogota' },
       { key: 'ar', label: '🇦🇷 Argentina', tz: 'America/Argentina/Buenos_Aires' },
       { key: 'cr', label: '🇨🇷 Costa Rica', tz: 'America/Costa_Rica' }
     ];
