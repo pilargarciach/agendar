@@ -1,0 +1,1869 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Agendemos nuestra sesión en la mejor fecha y hora para todos - Sondeo</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#f0fdfa',
+              100: '#ccfbf1',
+              500: '#14b8a6',
+              600: '#0d9488',
+              700: '#0f766e',
+              800: '#115e59',
+              900: '#134e4a',
+            },
+            navy: {
+              800: '#1e293b',
+              900: '#0f172a',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+    }
+    .slot-card {
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .slot-card:hover:not(:disabled) {
+      transform: translateY(-2px);
+    }
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between">
+
+  <!-- TOAST / NOTIFICATION CONTAINER (Replaces alert/confirm) -->
+  <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-md w-full px-4 sm:px-0 pointer-events-none"></div>
+
+  <!-- MODAL FOR GOOGLE APPS SCRIPT CODE -->
+  <div id="gas-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col overflow-hidden border border-slate-200">
+      <div class="px-6 py-4 bg-navy-900 text-white flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <i data-lucide="file-spreadsheet" class="w-5 h-5 text-brand-500"></i>
+          <h3 class="font-bold text-lg">Conectar con Excel de Google Drive (Google Sheets)</h3>
+        </div>
+        <button onclick="closeGasModal()" class="p-1.5 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white transition">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <div class="p-6 overflow-y-auto space-y-4 text-sm text-slate-700">
+        <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-amber-900">
+          <p class="font-semibold flex items-center gap-1.5 mb-1">
+            <i data-lucide="info" class="w-4 h-4 text-amber-600"></i>
+            ¿Por qué es obligatorio conectar Google Sheets?
+          </p>
+          <p class="text-xs leading-relaxed">
+            Al alojar esta página en <strong>GitHub Pages</strong>, los archivos son estáticos. Conectar una hoja de cálculo de Google Drive mediante Google Apps Script permite que los votos de todos los estudiantes se guarden centralmente en su Excel de Google Drive, evitando votos duplicados desde distintos dispositivos y permitiendo ver los resultados reales desde cualquier lugar.
+          </p>
+        </div>
+
+        <ol class="list-decimal list-inside space-y-2 font-medium text-slate-800">
+          <li>Vaya a <a href="https://sheets.new" target="_blank" class="text-brand-600 underline font-semibold">sheets.new</a> para crear una nueva hoja de cálculo en su Google Drive (ej. <em>"Resultados Sondeo Sesiones"</em>).</li>
+          <li>En el menú superior de Google Sheets, haga clic en <strong>Extensiones &gt; Apps Script</strong>.</li>
+          <li>Borre todo el código que aparece por defecto y pegue exactamente el siguiente código:</li>
+        </ol>
+
+        <div class="relative">
+          <button onclick="copyGasCode()" class="absolute top-3 right-3 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow flex items-center gap-1.5 transition">
+            <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copiar Código
+          </button>
+          <textarea id="gas-code-area" readonly rows="12" class="w-full bg-slate-900 text-emerald-300 font-mono text-xs p-4 rounded-xl border border-slate-700 focus:outline-none">function doGet(e) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  ensureHeaders(sheet);
+  var data = sheet.getDataRange().getValues();
+  var results = [];
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][2]) { // correo
+      results.push({
+        timestamp: data[i][0],
+        pais: data[i][1],
+        correo: String(data[i][2]).trim().toLowerCase(),
+        nombreCompleto: data[i][3],
+        opcion1Id: data[i][4],
+        opcion1Texto: data[i][5],
+        opcion2Id: data[i][6],
+        opcion2Texto: data[i][7],
+        anio: data[i][8]
+      });
+    }
+  }
+  return ContentService.createTextOutput(JSON.stringify({ status: 'ok', votes: results }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function doPost(e) {
+  var lock = LockService.getScriptLock();
+  lock.tryLock(10000);
+  try {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    ensureHeaders(sheet);
+    var payload = JSON.parse(e.postData.contents);
+    var email = String(payload.correo || '').trim().toLowerCase();
+    
+    // Verificar si el estudiante ya votó anteriormente
+    var data = sheet.getDataRange().getValues();
+    for (var i = 1; i < data.length; i++) {
+      if (String(data[i][2]).trim().toLowerCase() === email) {
+        return ContentService.createTextOutput(JSON.stringify({ 
+          status: 'duplicate', 
+          message: 'Este estudiante ya registró su selección previamente.' 
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+
+    sheet.appendRow([
+      new Date().toISOString(),
+      payload.pais,
+      email,
+      payload.nombreCompleto,
+      payload.opcion1Id,
+      payload.opcion1Texto,
+      payload.opcion2Id,
+      payload.opcion2Texto,
+      payload.anio
+    ]);
+
+    return ContentService.createTextOutput(JSON.stringify({ status: 'ok' }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: err.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function ensureHeaders(sheet) {
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow([
+      'Fecha Registro', 'País', 'Correo', 'Nombre Completo',
+      'ID Opción 1', 'Fecha y Hora Opción 1 (CDMX)',
+      'ID Opción 2', 'Fecha y Hora Opción 2 (CDMX)', 'Año Sondeo'
+    ]);
+    sheet.getRange(1, 1, 1, 9).setFontWeight('bold').setBackground('#0f766e').setFontColor('#ffffff');
+  }
+}</textarea>
+        </div>
+
+        <ol start="4" class="list-decimal list-inside space-y-2 font-medium text-slate-800">
+          <li>Haga clic en el botón azul <strong>Implementar &gt; Nueva implementación</strong>.</li>
+          <li>En <em>Seleccionar tipo</em> (ícono de engranaje), elija <strong>Aplicación web</strong>.</li>
+          <li>Configure:
+            <ul class="list-disc list-inside ml-5 text-xs text-slate-600 mt-1 space-y-1">
+              <li><strong>Ejecutar como:</strong> <em>Yo (su correo de Google)</em></li>
+              <li><strong>Quién tiene acceso:</strong> <em>Cualquier usuario</em> (¡Muy importante para que los estudiantes puedan enviar su voto sin bloqueos!)</li>
+            </ul>
+          </li>
+          <li>Autorice los permisos, copie la <strong>URL de la aplicación web</strong> (termina en <code>/exec</code>) y péguela en el panel del Profesor.</li>
+        </ol>
+      </div>
+      <div class="px-6 py-3 bg-slate-50 border-t border-slate-200 flex justify-end">
+        <button onclick="closeGasModal()" class="px-5 py-2 bg-navy-900 hover:bg-navy-800 text-white font-semibold rounded-xl text-sm transition">
+          Entendido
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- HEADER -->
+  <header class="bg-gradient-to-r from-navy-900 via-slate-800 to-brand-900 text-white shadow-lg border-b border-brand-700/40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div class="space-y-1.5">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-500/20 border border-brand-400/30 text-brand-100 text-xs font-semibold">
+            <i data-lucide="calendar-clock" class="w-3.5 h-3.5"></i>
+            <span>Sesiones Sincrónicas • Duración: 2 Horas • Año <span id="header-year-badge">2026</span></span>
+          </div>
+          <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-white leading-tight">
+            Agendemos nuestra sesión en la mejor fecha y hora para todos - Sondeo
+          </h1>
+          <p class="text-slate-300 text-xs sm:text-sm max-w-3xl">
+            Horario base de referencia: <strong>Ciudad de México (CDMX)</strong>. El sistema convierte automáticamente cada bloque de 2 horas a los husos horarios de <strong>Chile, Perú, Ecuador, Argentina y Costa Rica</strong>.
+          </p>
+        </div>
+
+        <!-- ROLE NAVIGATION BUTTONS -->
+        <div class="flex flex-wrap items-center gap-2.5 shrink-0">
+          <button id="btn-tab-student" onclick="switchRole('student')" class="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition shadow-md bg-brand-500 text-white ring-2 ring-brand-300">
+            <i data-lucide="graduation-cap" class="w-4 h-4"></i>
+            <span>Acceso Estudiantes</span>
+          </button>
+          <button id="btn-tab-professor" onclick="switchRole('professor')" class="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition bg-white/10 hover:bg-white/20 text-white border border-white/20">
+            <i data-lucide="shield-check" class="w-4 h-4"></i>
+            <span>Acceso Profesor</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- LIVE MULTI-TIMEZONE CLOCK BAR -->
+      <div class="mt-5 pt-4 border-t border-white/10 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 text-xs">
+        <div class="bg-white/10 backdrop-blur-sm rounded-xl px-3 py-2 border border-brand-400/40">
+          <div class="text-brand-300 font-bold flex items-center justify-between">
+            <span>🇲🇽 CDMX (Ref.)</span>
+            <span class="text-[10px] uppercase bg-brand-500/30 px-1.5 rounded">Base</span>
+          </div>
+          <div id="clock-mx" class="font-mono text-sm font-semibold text-white mt-0.5">--:--</div>
+        </div>
+        <div class="bg-white/5 rounded-xl px-3 py-2 border border-white/10">
+          <div class="text-slate-300 font-semibold">🇨🇱 Chile (Santiago)</div>
+          <div id="clock-cl" class="font-mono text-sm font-semibold text-white mt-0.5">--:--</div>
+        </div>
+        <div class="bg-white/5 rounded-xl px-3 py-2 border border-white/10">
+          <div class="text-slate-300 font-semibold">🇵🇪 Perú (Lima)</div>
+          <div id="clock-pe" class="font-mono text-sm font-semibold text-white mt-0.5">--:--</div>
+        </div>
+        <div class="bg-white/5 rounded-xl px-3 py-2 border border-white/10">
+          <div class="text-slate-300 font-semibold">🇪🇨 Ecuador (Quito)</div>
+          <div id="clock-ec" class="font-mono text-sm font-semibold text-white mt-0.5">--:--</div>
+        </div>
+        <div class="bg-white/5 rounded-xl px-3 py-2 border border-white/10">
+          <div class="text-slate-300 font-semibold">🇦🇷 Argentina (Bs.As.)</div>
+          <div id="clock-ar" class="font-mono text-sm font-semibold text-white mt-0.5">--:--</div>
+        </div>
+        <div class="bg-white/5 rounded-xl px-3 py-2 border border-white/10">
+          <div class="text-slate-300 font-semibold">🇨🇷 Costa Rica</div>
+          <div id="clock-cr" class="font-mono text-sm font-semibold text-white mt-0.5">--:--</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT -->
+  <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    <!-- CONNECTION STATUS BANNER -->
+    <div id="sheets-status-banner" class="mb-6 rounded-2xl p-4 border flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white shadow-sm">
+      <div class="flex items-center gap-3">
+        <div id="sheets-status-icon" class="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+          <i data-lucide="database" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <h2 id="sheets-status-title" class="text-sm font-bold text-slate-800">Verificando conexión con Google Drive (Google Sheets)...</h2>
+          <p id="sheets-status-desc" class="text-xs text-slate-500">Sincronizando registros de participación en tiempo real.</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="syncVotesFromCloud(true)" class="px-3 py-2 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center gap-1.5 transition">
+          <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Actualizar Datos
+        </button>
+      </div>
+    </div>
+
+    <!-- ========================================================= -->
+    <!-- VIEW 1: ACCESO ESTUDIANTES                                -->
+    <!-- ========================================================= -->
+    <section id="view-student" class="space-y-6">
+
+      <!-- STEP 1: STUDENT VERIFICATION CARD -->
+      <div id="student-login-card" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8 max-w-2xl mx-auto">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-12 h-12 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center border border-brand-200">
+            <i data-lucide="user-check" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <h2 class="text-xl font-bold text-slate-900">Verificación de Estudiante</h2>
+            <p class="text-xs sm:text-sm text-slate-500">Ingrese su correo electrónico registrado y su nombre para acceder al sondeo (1 única participación).</p>
+          </div>
+        </div>
+
+        <form id="student-auth-form" onsubmit="handleStudentVerify(event)" class="space-y-4 mt-6">
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Correo Electrónico Institucional o Personal Registrado *</label>
+            <div class="relative">
+              <i data-lucide="mail" class="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5"></i>
+              <input type="email" id="input-student-email" required placeholder="ejemplo@correo.com"
+                class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-sm transition" />
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Nombres o Apellidos *</label>
+            <div class="relative">
+              <i data-lucide="user" class="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5"></i>
+              <input type="text" id="input-student-name" required placeholder="Ej. Luis Alejandro o Caro Villalobos"
+                class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-sm transition" />
+            </div>
+            <p class="text-[11px] text-slate-400 mt-1">Validaremos sus datos con la lista oficial del curso. Cada estudiante puede ingresar una sola vez y elegir <strong>2 opciones de horario</strong>.</p>
+          </div>
+
+          <div id="student-auth-error" class="hidden p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-start gap-2">
+            <i data-lucide="alert-circle" class="w-4 h-4 shrink-0 mt-0.5"></i>
+            <span id="student-auth-error-text"></span>
+          </div>
+
+          <button type="submit" class="w-full py-3 px-5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-sm shadow-md shadow-brand-600/20 flex items-center justify-center gap-2 transition">
+            <span>Validar y Continuar al Sondeo</span>
+            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+          </button>
+        </form>
+      </div>
+
+      <!-- STEP 2: ALREADY VOTED NOTICE + LIVE RESULTS -->
+      <div id="student-already-voted-card" class="hidden space-y-6">
+        <div class="bg-white rounded-2xl shadow-sm border border-emerald-200 p-6 sm:p-8">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-100">
+            <div class="flex items-center gap-3.5">
+              <div class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                <i data-lucide="check-circle-2" class="w-7 h-7"></i>
+              </div>
+              <div>
+                <span class="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 mb-1">Participación Registrada</span>
+                <h2 id="voted-student-greeting" class="text-xl font-bold text-slate-900">¡Gracias por participar!</h2>
+                <p id="voted-student-meta" class="text-xs text-slate-500"></p>
+              </div>
+            </div>
+            <button onclick="resetStudentSession()" class="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-semibold text-slate-600 transition self-start sm:self-center">
+              Salir / Cambiar Usuario
+            </button>
+          </div>
+
+          <div class="mt-5">
+            <p class="text-sm text-slate-600 mb-3 font-medium">Sus <strong>2 opciones de fecha y horario (2 horas)</strong> registradas son:</p>
+            <div id="voted-student-choices" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+          </div>
+        </div>
+
+        <!-- GRAPHICAL RESULTS SHOWN AFTER VOTING -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
+            <div>
+              <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <i data-lucide="bar-chart-3" class="w-5 h-5 text-brand-600"></i>
+                <span>Resultados Parciales del Sondeo en Tiempo Real</span>
+              </h3>
+              <p class="text-xs text-slate-500">Número de estudiantes que han optado por cada fecha y bloque horario (Referencia CDMX).</p>
+            </div>
+            <span id="student-chart-total-badge" class="px-3 py-1.5 rounded-xl bg-brand-50 text-brand-700 font-bold text-xs border border-brand-200">
+              0 votos registrados
+            </span>
+          </div>
+          <div class="relative h-80 sm:h-96 w-full">
+            <canvas id="studentResultsChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 3: SLOT SELECTION INTERFACE (EXACTLY 2 OPTIONS) -->
+      <div id="student-voting-workspace" class="hidden space-y-6">
+        <!-- Welcome & Selection Counter Sticky Bar -->
+        <div class="bg-white rounded-2xl shadow-md border border-brand-200 p-4 sm:p-5 sticky top-3 z-30">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <div class="flex items-center gap-2">
+                <span id="active-student-country-badge" class="px-2.5 py-0.5 rounded-md bg-navy-900 text-white text-xs font-bold">PAÍS</span>
+                <h2 id="active-student-name" class="text-base sm:text-lg font-bold text-slate-900">Nombre del Estudiante</h2>
+              </div>
+              <p class="text-xs text-slate-500 mt-0.5">
+                Seleccione <strong>exactamente 2 opciones</strong> de fecha y bloque de 2 horas en los que tenga disponibilidad.
+              </p>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-3">
+              <div class="px-4 py-2 rounded-xl bg-slate-100 border border-slate-200 flex items-center gap-2">
+                <span class="text-xs font-semibold text-slate-600">Seleccionadas:</span>
+                <span id="selection-count-badge" class="text-base font-extrabold text-brand-600">0 / 2</span>
+              </div>
+              <button id="btn-submit-vote" onclick="submitStudentVote()" disabled
+                class="px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-bold text-sm shadow-sm flex items-center gap-2 transition">
+                <i data-lucide="send" class="w-4 h-4"></i>
+                <span>Confirmar Mis 2 Opciones</span>
+              </button>
+              <button onclick="resetStudentSession()" class="p-2.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-500" title="Cancelar">
+                <i data-lucide="log-out" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Selected Pills Preview -->
+          <div id="selected-pills-container" class="mt-3 pt-3 border-t border-slate-100 flex flex-wrap gap-2 hidden"></div>
+        </div>
+
+        <!-- Date Filter Tabs (Monday to Sunday) -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+            <h3 class="font-bold text-slate-800 text-sm flex items-center gap-2">
+              <i data-lucide="calendar-days" class="w-4 h-4 text-brand-600"></i>
+              <span>Seleccione una fecha habilitada (Lunes a Domingo) para ver sus horarios de 2 horas:</span>
+            </h3>
+            <span class="text-xs text-slate-500">Todos los bloques tienen duración de <strong>2 horas</strong></span>
+          </div>
+
+          <div id="student-dates-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <!-- Dynamically populated date + 2h slot cards -->
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ========================================================= -->
+    <!-- VIEW 2: ACCESO PROFESOR                                   -->
+    <!-- ========================================================= -->
+    <section id="view-professor" class="hidden space-y-6">
+
+      <!-- PROFESSOR LOGIN GATE -->
+      <div id="professor-login-card" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8 max-w-md mx-auto">
+        <div class="w-12 h-12 rounded-2xl bg-navy-900 text-brand-400 flex items-center justify-center mb-4">
+          <i data-lucide="lock" class="w-6 h-6"></i>
+        </div>
+        <h2 class="text-xl font-bold text-slate-900">Panel de Administración Docente</h2>
+        <p class="text-xs text-slate-500 mt-1">Ingrese la clave de profesor para configurar fechas, horarios, año, conexión a Google Drive y consultar los resultados.</p>
+
+        <form onsubmit="handleProfessorLogin(event)" class="mt-5 space-y-4">
+      <div>
+       <label class="block text-xs font-bold uppercase text-slate-600 mb-1.5">Contraseña Docente</label>
+       <input type="password" id="prof-password-input" required placeholder="Ingrese su contraseña"
+      class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-sm" />
+      </div>
+      <div id="prof-login-error" class="hidden text-xs text-rose-600 font-semibold">Contraseña incorrecta. Intente nuevamente.</div>
+       <button type="submit" class="w-full py-2.5 px-4 rounded-xl bg-navy-900 hover:bg-navy-800 text-white font-bold text-sm transition">
+    Ingresar al Panel Profesor
+      </button>
+      </form>
+      </div>
+
+      <!-- PROFESSOR DASHBOARD WORKSPACE -->
+      <div id="professor-dashboard" class="hidden space-y-6">
+
+        <!-- Top Action Bar -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 class="text-xl font-extrabold text-slate-900">Panel de Control y Resultados del Sondeo</h2>
+            <p class="text-xs text-slate-500">Gestione el año, fechas habilitadas, franjas horarias de 2 horas y conexión con Google Sheets.</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <button onclick="openGasModal()" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition">
+              <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+              <span>Instrucciones Excel Google Drive</span>
+            </button>
+            <button onclick="exportResultsCSV()" class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold flex items-center gap-1.5 transition">
+              <i data-lucide="download" class="w-4 h-4"></i>
+              <span>Descargar CSV / Excel</span>
+            </button>
+            <button onclick="logoutProfessor()" class="px-3.5 py-2 rounded-xl border border-slate-200 hover:bg-rose-50 hover:text-rose-600 text-slate-600 text-xs font-semibold transition">
+              Cerrar Sesión
+            </button>
+          </div>
+        </div>
+
+        <!-- KPI SUMMARY CARDS -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+            <div class="text-xs font-bold uppercase text-slate-400">Estudiantes Participantes</div>
+            <div class="mt-2 flex items-baseline gap-2">
+              <span id="kpi-voted-count" class="text-3xl font-extrabold text-slate-900">0</span>
+              <span id="kpi-total-students" class="text-sm font-semibold text-slate-500">/ 13 registrados</span>
+            </div>
+          </div>
+          <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+            <div class="text-xs font-bold uppercase text-slate-400">Total Opciones Elegidas</div>
+            <div class="mt-2 flex items-baseline gap-2">
+              <span id="kpi-total-selections" class="text-3xl font-extrabold text-brand-600">0</span>
+              <span class="text-xs font-medium text-slate-500">(2 por estudiante)</span>
+            </div>
+          </div>
+          <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm sm:col-span-2">
+            <div class="text-xs font-bold uppercase text-brand-600 flex items-center gap-1">
+              <i data-lucide="trophy" class="w-3.5 h-3.5"></i> Horario(s) con Mayor Votación (CDMX)
+            </div>
+            <div id="kpi-top-slot" class="mt-2 text-sm sm:text-base font-extrabold text-slate-900">
+              Aún sin votos registrados
+            </div>
+          </div>
+        </div>
+
+        <!-- PROFESSOR SUB-TABS -->
+        <div class="flex flex-wrap gap-2 border-b border-slate-200 pb-2">
+          <button onclick="switchProfTab('results')" id="ptab-results" class="px-4 py-2 rounded-xl text-xs font-bold bg-navy-900 text-white transition">
+            📊 Resultados y Gráfica
+          </button>
+          <button onclick="switchProfTab('config')" id="ptab-config" class="px-4 py-2 rounded-xl text-xs font-bold bg-white text-slate-600 hover:bg-slate-100 border border-slate-200 transition">
+            ⚙️ Configurar Año, Fechas y Horarios
+          </button>
+          <button onclick="switchProfTab('sheets')" id="ptab-sheets" class="px-4 py-2 rounded-xl text-xs font-bold bg-white text-slate-600 hover:bg-slate-100 border border-slate-200 transition">
+            🔗 Conexión Google Drive & Seguridad
+          </button>
+          <button onclick="switchProfTab('students')" id="ptab-students" class="px-4 py-2 rounded-xl text-xs font-bold bg-white text-slate-600 hover:bg-slate-100 border border-slate-200 transition">
+            👥 Lista de Estudiantes (13)
+          </button>
+        </div>
+
+        <!-- SUB-TAB 1: RESULTS & CHART -->
+        <div id="prof-panel-results" class="space-y-6">
+          <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+            <h3 class="text-base font-bold text-slate-900 mb-1">Gráfica Comparativa de Preferencias (Bloques de 2 Horas)</h3>
+            <p class="text-xs text-slate-500 mb-5">Cantidad de votos recibidos por cada fecha y franja horaria (Referencia CDMX).</p>
+            <div class="relative h-80 sm:h-96 w-full">
+              <canvas id="profResultsChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Ranking Table by Slot -->
+          <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+              <h3 class="text-base font-bold text-slate-900">Desglose Numérico por Fecha y Horario</h3>
+              <span class="text-xs text-slate-500">Ordenado de mayor a menor votación</span>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr class="bg-slate-50 text-slate-600 uppercase font-bold border-b border-slate-200">
+                    <th class="py-3 px-4">Fecha</th>
+                    <th class="py-3 px-4">Bloque CDMX (2h)</th>
+                    <th class="py-3 px-4">Equivalencia Países</th>
+                    <th class="py-3 px-4 text-center">N° Votos</th>
+                    <th class="py-3 px-4">Estudiantes que eligieron este horario</th>
+                  </tr>
+                </thead>
+                <tbody id="prof-slots-ranking-tbody" class="divide-y divide-slate-100"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Detailed Student Submissions Table -->
+          <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <h3 class="text-base font-bold text-slate-900">Registro Individual de Respuestas</h3>
+              <button onclick="clearDemoLocalVotes()" class="text-xs text-rose-600 hover:underline font-semibold">
+                Limpiar caché local de pruebas
+              </button>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr class="bg-slate-50 text-slate-600 uppercase font-bold border-b border-slate-200">
+                    <th class="py-3 px-4">Estado</th>
+                    <th class="py-3 px-4">País</th>
+                    <th class="py-3 px-4">Estudiante</th>
+                    <th class="py-3 px-4">Correo</th>
+                    <th class="py-3 px-4">Opción 1 Elegida</th>
+                    <th class="py-3 px-4">Opción 2 Elegida</th>
+                  </tr>
+                </thead>
+                <tbody id="prof-students-responses-tbody" class="divide-y divide-slate-100"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- SUB-TAB 2: GENERAL CONFIGURATION (YEAR, DATES MON-SUN, 2-HOUR BLOCKS) -->
+        <div id="prof-panel-config" class="hidden space-y-6">
+          <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+              <div>
+                <h3 class="text-base font-bold text-slate-900">Configuración General del Sondeo (Reutilizable)</h3>
+                <p class="text-xs text-slate-500">Fije el año, active o desactive fechas (de lunes a domingo) y seleccione qué franjas horarias de 2 horas estarán disponibles.</p>
+              </div>
+              <button onclick="saveProfessorConfig()" class="px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-sm flex items-center gap-1.5 transition">
+                <i data-lucide="save" class="w-4 h-4"></i>
+                <span>Guardar Configuración</span>
+              </button>
+            </div>
+
+            <!-- Year & Date Generator -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Año del Sondeo (Futuros años)</label>
+                <input type="number" id="cfg-year" min="2025" max="2099" value="2026" onchange="handleYearChange()"
+                  class="w-full px-3.5 py-2 rounded-xl border border-slate-300 bg-white text-sm font-bold text-slate-900" />
+                <p class="text-[11px] text-slate-500 mt-1">Al cambiar el año se actualizan los días de la semana y cambios de horario (DST).</p>
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Agregar Fecha Específica al Sondeo</label>
+                <div class="flex gap-2">
+                  <input type="date" id="cfg-new-date" class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-medium" />
+                  <button type="button" onclick="addSpecificDate()" class="px-3.5 py-2 rounded-xl bg-navy-900 hover:bg-navy-800 text-white text-xs font-bold shrink-0">
+                    + Agregar
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Generar Semana Completa (Lun - Dom)</label>
+                <div class="flex gap-2">
+                  <input type="date" id="cfg-week-start" class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-medium" />
+                  <button type="button" onclick="generateWeekDates()" class="px-3.5 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold shrink-0">
+                    7 Días
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Active/Inactive Dates Manager -->
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <h4 class="text-sm font-bold text-slate-800">1. Fechas del Sondeo (Activar / Desactivar días Lunes a Domingo)</h4>
+                <div class="flex gap-2">
+                  <button type="button" onclick="toggleAllDates(true)" class="text-xs text-brand-600 font-semibold hover:underline">Activar todas</button>
+                  <span class="text-slate-300">|</span>
+                  <button type="button" onclick="toggleAllDates(false)" class="text-xs text-slate-500 font-semibold hover:underline">Desactivar todas</button>
+                </div>
+              </div>
+              <div id="cfg-dates-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+            </div>
+
+            <!-- Active/Inactive 2-Hour Time Blocks Manager -->
+            <div class="pt-4 border-t border-slate-100">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                <div>
+                  <h4 class="text-sm font-bold text-slate-800">2. Franjas Horarias de 2 Horas (Hora Base CDMX)</h4>
+                  <p class="text-xs text-slate-500">Active o desactive las franjas horarias que desea ofrecer en el sondeo.</p>
+                </div>
+                <div class="flex items-center gap-2">
+                  <input type="time" id="cfg-custom-start-time" value="15:00" class="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs" />
+                  <button type="button" onclick="addCustomTimeBlock()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold">
+                    + Bloque 2h
+                  </button>
+                </div>
+              </div>
+              <div id="cfg-times-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SUB-TAB 3: GOOGLE SHEETS CONNECTION & PASSWORD -->
+        <div id="prof-panel-sheets" class="hidden space-y-6">
+          <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-5">
+            <div>
+              <h3 class="text-base font-bold text-slate-900">Conexión Obligatoria con Excel de Google Drive (Google Sheets)</h3>
+              <p class="text-xs text-slate-500 mt-1">
+                Pegue aquí la URL de su aplicación web de Google Apps Script para que todos los registros de los estudiantes queden guardados automáticamente en su hoja de cálculo de Google Drive.
+              </p>
+            </div>
+
+            <div class="space-y-3">
+              <label class="block text-xs font-bold uppercase text-slate-700">URL del Script de Google Sheets (Web App URL)</label>
+              <div class="flex flex-col sm:flex-row gap-2">
+                <input type="url" id="cfg-gas-url" placeholder="https://script.google.com/macros/s/AKfycb.../exec"
+                  class="flex-grow px-4 py-2.5 rounded-xl border border-slate-300 text-xs font-mono focus:ring-2 focus:ring-brand-500" />
+                <button onclick="saveGasUrl()" class="px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shrink-0 transition">
+                  Guardar y Conectar
+                </button>
+                <button onclick="openGasModal()" class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs shrink-0 transition">
+                  Ver Código Script
+                </button>
+              </div>
+              <p class="text-[11px] text-slate-500">
+                <strong>Importante para GitHub Pages:</strong> Una vez guardada la URL aquí, si desea que cualquier estudiante que abra el enlace de GitHub Pages se conecte automáticamente sin configurarlo manualmente, también puede pegar esta URL dentro de la constante <code>DEFAULT_GOOGLE_SHEET_URL</code> en la primera línea de configuración del archivo <code>index.html</code> antes de subirlo a GitHub.
+              </p>
+            </div>
+
+            <div class="pt-5 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Cambiar Clave de Acceso Profesor</label>
+                <div class="flex gap-2">
+                  <input type="text" id="cfg-new-prof-pass" placeholder="Nueva contraseña docente"
+                    class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs" />
+                  <button onclick="updateProfessorPassword()" class="px-4 py-2 rounded-xl bg-navy-900 text-white text-xs font-bold shrink-0">
+                    Actualizar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SUB-TAB 4: STUDENT WHITELIST -->
+        <div id="prof-panel-students" class="hidden space-y-6">
+          <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+              <div>
+                <h3 class="text-base font-bold text-slate-900">Lista Oficial de Estudiantes Autorizados</h3>
+                <p class="text-xs text-slate-500">Solo los estudiantes en esta lista pueden ingresar con su nombre y correo (1 vez por estudiante).</p>
+              </div>
+            </div>
+
+            <!-- Add student form for future courses -->
+            <form onsubmit="addStudentToWhitelist(event)" class="grid grid-cols-1 sm:grid-cols-5 gap-2 mb-5 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+              <input type="text" id="new-st-country" required placeholder="País (ej. CHILE)" class="px-3 py-2 rounded-lg border border-slate-300 text-xs uppercase" />
+              <input type="text" id="new-st-last" required placeholder="Apellidos" class="px-3 py-2 rounded-lg border border-slate-300 text-xs uppercase" />
+              <input type="text" id="new-st-first" required placeholder="Nombres" class="px-3 py-2 rounded-lg border border-slate-300 text-xs uppercase" />
+              <input type="email" id="new-st-email" required placeholder="correo@ejemplo.com" class="px-3 py-2 rounded-lg border border-slate-300 text-xs lowercase" />
+              <button type="submit" class="px-4 py-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs">
+                + Agregar Estudiante
+              </button>
+            </form>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr class="bg-slate-50 text-slate-600 uppercase font-bold border-b border-slate-200">
+                    <th class="py-2.5 px-3">#</th>
+                    <th class="py-2.5 px-3">País</th>
+                    <th class="py-2.5 px-3">Apellidos</th>
+                    <th class="py-2.5 px-3">Nombres</th>
+                    <th class="py-2.5 px-3">Correo</th>
+                    <th class="py-2.5 px-3 text-right">Acción</th>
+                  </tr>
+                </thead>
+                <tbody id="whitelist-tbody" class="divide-y divide-slate-100"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="bg-navy-900 text-slate-300 border-t border-slate-800 mt-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+      <p class="font-semibold text-white text-center sm:text-left">
+        Creado por María del Pilar García Chitiva, todos los derechos reservados.
+      </p>
+      <p class="text-slate-400">
+        Referencia Horaria: Ciudad de México (CDMX) • Bloques de 2 Horas
+      </p>
+    </div>
+  </footer>
+
+  <!-- ========================================================= -->
+  <!-- JAVASCRIPT LOGIC                                          -->
+  <!-- ========================================================= -->
+  <script>
+    /**
+     * ============================================================================
+     * CONFIGURACIÓN INICIAL PARA GITHUB PAGES
+     * Si desea que la URL de su Google Apps Script quede fija de forma permanente
+     * en el repositorio de GitHub para todos sus estudiantes, péguela entre las
+     * comillas de DEFAULT_GOOGLE_SHEET_URL antes de subir el archivo index.html.
+     * ============================================================================
+     */
+    const DEFAULT_GOOGLE_SHEET_URL = ""; // Ejemplo: "https://script.google.com/macros/s/AKfycb.../exec"
+
+    // Lista oficial precargada de los 13 estudiantes
+    const INITIAL_STUDENTS = [
+      { pais: "CHILE", apellidos: "CARO VILLALOBOS", nombres: "LUIS ALEJANDRO", correo: "luis.carovillalobos@gmail.com" },
+      { pais: "COSTA RICA", apellidos: "DURAN SALAZAR", nombres: "CRISTIAN ARTURO", correo: "c.dusa@hotmail.com" },
+      { pais: "CHILE", apellidos: "ESPINOZA ORMEÑO", nombres: "DANIELA PAZ", correo: "danielaespinoza.diferencial@gmail.com" },
+      { pais: "CHILE", apellidos: "ESPINOZA SAAVEDRA", nombres: "KARENA ALEXANDRA", correo: "karena.espinoza.saa@gmail.com" },
+      { pais: "CHILE", apellidos: "GONZALEZ AGULERA", nombres: "MAURICIO DANIEL", correo: "md.gonzalezaguilera@gmail.com" },
+      { pais: "CHILE", apellidos: "MUÑOZ TAPIA", nombres: "JUAN GUILLERMO", correo: "juangmt1992@gmail.com" },
+      { pais: "CHILE", apellidos: "NICOLÁS", nombres: "FERNANDEZ ASTUDILLO", correo: "nicolas.fernandez@upla.cl" },
+      { pais: "CHILE", apellidos: "OLIVARES CORTES", nombres: "MAXIMO ANDRES", correo: "olivares.maximo@gmail.com" },
+      { pais: "PERU", apellidos: "QUISPE QUISPE", nombres: "ANDRES AVELINO", correo: "aqdocencia0425@gmail.com" },
+      { pais: "CHILE", apellidos: "ROJAS VERGARA", nombres: "PAOLA ALEJANDRA", correo: "pao.rojasvergara.89@gmail.com" },
+      { pais: "PERÚ", apellidos: "SAYAN ROJAS", nombres: "CARLOS ERNESTO", correo: "carlossayanr@gmail.com" },
+      { pais: "PERÚ", apellidos: "SCHENONE BROMLEY", nombres: "JOSÉ LUIS", correo: "jschenone25@gmail.com" },
+      { pais: "PERÚ", apellidos: "ZAMORA TAPIA", nombres: "BRITTO DANIEL", correo: "brittodaniel@gmail.com" }
+    ];
+
+    // Bloques horarios predeterminados de 2 horas (Hora Ciudad de México)
+    const DEFAULT_TIME_BLOCKS = [
+      { id: "08:00", startHour: 8, startMin: 0, active: false },
+      { id: "10:00", startHour: 10, startMin: 0, active: true },
+      { id: "12:00", startHour: 12, startMin: 0, active: true },
+      { id: "14:00", startHour: 14, startMin: 0, active: false },
+      { id: "16:00", startHour: 16, startMin: 0, active: true },
+      { id: "18:00", startHour: 18, startMin: 0, active: true },
+      { id: "20:00", startHour: 20, startMin: 0, active: false }
+    ];
+
+    // Generar fechas por defecto de Lunes a Domingo a partir de la próxima semana
+    function getDefaultWeekDates(year = 2026) {
+      const now = new Date();
+      const base = new Date(year, now.getMonth(), now.getDate());
+      // Buscar el próximo lunes
+      const day = base.getDay();
+      const diffToMonday = day === 0 ? 1 : (8 - day);
+      base.setDate(base.getDate() + diffToMonday);
+
+      const list = [];
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(base);
+        d.setDate(base.getDate() + i);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        list.push({
+          date: `${yyyy}-${mm}-${dd}`,
+          active: true
+        });
+      }
+      return list;
+    }
+
+    // Estado global de la aplicación
+    let appState = {
+      year: 2026,
+      profPassword: localStorage.getItem('sondeo_prof_pass') || '52525372',
+      gasUrl: localStorage.getItem('sondeo_gas_url') || DEFAULT_GOOGLE_SHEET_URL,
+      dates: JSON.parse(localStorage.getItem('sondeo_dates')) || getDefaultWeekDates(2026),
+      timeBlocks: JSON.parse(localStorage.getItem('sondeo_timeblocks')) || DEFAULT_TIME_BLOCKS,
+      students: JSON.parse(localStorage.getItem('sondeo_students')) || INITIAL_STUDENTS,
+      votes: JSON.parse(localStorage.getItem('sondeo_votes_cache')) || [],
+      currentStudent: null,
+      selectedSlots: [],
+      isProfessorAuthenticated: false
+    };
+
+    // Cargar año guardado si existe
+    const savedYear = localStorage.getItem('sondeo_year');
+    if (savedYear) {
+      appState.year = parseInt(savedYear, 10);
+    }
+
+    let studentChartInstance = null;
+    let profChartInstance = null;
+
+    // ============================================================================
+    // UTILIDADES DE ZONA HORARIA (CDMX -> CHILE, PERÚ, ECUADOR, ARGENTINA, CR)
+    // ============================================================================
+    const TIMEZONES = [
+      { key: 'mx', label: '🇲🇽 CDMX', tz: 'America/Mexico_City', isRef: true },
+      { key: 'cl', label: '🇨🇱 Chile', tz: 'America/Santiago' },
+      { key: 'pe', label: '🇵🇪 Perú', tz: 'America/Lima' },
+      { key: 'ec', label: '🇪🇨 Ecuador', tz: 'America/Guayaquil' },
+      { key: 'ar', label: '🇦🇷 Argentina', tz: 'America/Argentina/Buenos_Aires' },
+      { key: 'cr', label: '🇨🇷 Costa Rica', tz: 'America/Costa_Rica' }
+    ];
+
+    // Crea un objeto Date exacto tomando la hora de Ciudad de México (UTC-6 estándar)
+    function createCdmxDate(dateStr, hour, minute) {
+      // Ciudad de México no usa horario de verano desde 2023 (UTC-6 todo el año)
+      const [y, m, d] = dateStr.split('-').map(Number);
+      const hh = String(hour).padStart(2, '0');
+      const mm = String(minute).padStart(2, '0');
+      return new Date(`${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}T${hh}:${mm}:00-06:00`);
+    }
+
+    function formatTimeInZone(dateObj, timeZone) {
+      return new Intl.DateTimeFormat('es-MX', {
+        timeZone,
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      }).format(dateObj);
+    }
+
+    function getDayShiftIndicator(baseDateStr, dateObj, timeZone) {
+      const targetDateStr = new Intl.DateTimeFormat('en-CA', {
+        timeZone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      }).format(dateObj);
+      if (targetDateStr > baseDateStr) return ' (+1 día)';
+      if (targetDateStr < baseDateStr) return ' (-1 día)';
+      return '';
+    }
+
+    // Calcula el bloque de 2 horas en todos los países
+    function getMultiTimezoneSlotInfo(dateStr, startHour, startMin) {
+      const startDate = createCdmxDate(dateStr, startHour, startMin);
+      const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000); // +2 horas
+
+      const conversions = {};
+      TIMEZONES.forEach(zone => {
+        const s = formatTimeInZone(startDate, zone.tz);
+        const e = formatTimeInZone(endDate, zone.tz);
+        const shift = getDayShiftIndicator(dateStr, startDate, zone.tz);
+        conversions[zone.key] = `${s} - ${e}${shift}`;
+      });
+
+      return conversions;
+    }
+
+    function formatSpanishDateFull(dateStr) {
+      const [y, m, d] = dateStr.split('-').map(Number);
+      const dt = new Date(y, m - 1, d, 12, 0, 0);
+      const weekday = new Intl.DateTimeFormat('es-ES', { weekday: 'long' }).format(dt);
+      const dayMonth = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }).format(dt);
+      return {
+        weekday: weekday.charAt(0).toUpperCase() + weekday.slice(1),
+        full: `${weekday.charAt(0).toUpperCase() + weekday.slice(1)}, ${dayMonth}`
+      };
+    }
+
+    // Relojes en vivo en el encabezado
+    function updateLiveClocks() {
+      const now = new Date();
+      TIMEZONES.forEach(z => {
+        const el = document.getElementById(`clock-${z.key}`);
+        if (el) {
+          el.textContent = new Intl.DateTimeFormat('es-MX', {
+            timeZone: z.tz,
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+          }).format(now);
+        }
+      });
+    }
+
+    // ============================================================================
+    // NOTIFICACIONES UI (SIN ALERT/CONFIRM)
+    // ============================================================================
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      const colors = {
+        success: 'bg-emerald-900 text-white border-emerald-700',
+        error: 'bg-rose-900 text-white border-rose-700',
+        warning: 'bg-amber-900 text-white border-amber-700',
+        info: 'bg-navy-900 text-white border-slate-700'
+      };
+      toast.className = `pointer-events-auto p-4 rounded-xl shadow-xl border text-xs font-medium flex items-center justify-between gap-3 transition-all ${colors[type] || colors.info}`;
+      toast.innerHTML = `
+        <span>${message}</span>
+        <button onclick="this.parentElement.remove()" class="text-white/70 hover:text-white font-bold">✕</button>
+      `;
+      container.appendChild(toast);
+      setTimeout(() => {
+        if (toast.parentElement) toast.remove();
+      }, 5000);
+    }
+
+    // ============================================================================
+    // CONEXIÓN CON GOOGLE SHEETS (GOOGLE DRIVE EXCEL)
+    // ============================================================================
+    function updateConnectionBanner() {
+      const banner = document.getElementById('sheets-status-banner');
+      const icon = document.getElementById('sheets-status-icon');
+      const title = document.getElementById('sheets-status-title');
+      const desc = document.getElementById('sheets-status-desc');
+
+      if (appState.gasUrl && appState.gasUrl.startsWith('http')) {
+        banner.className = 'mb-6 rounded-2xl p-4 border border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-emerald-50/70 shadow-sm';
+        icon.className = 'w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0';
+        title.textContent = 'Conectado a Excel de Google Drive (Google Sheets)';
+        desc.textContent = `Base de datos sincronizada • ${appState.votes.length} participación(es) registrada(s) en la nube.`;
+      } else {
+        banner.className = 'mb-6 rounded-2xl p-4 border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-amber-50/80 shadow-sm';
+        icon.className = 'w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0';
+        title.textContent = 'Modo Local (Pendiente vincular URL de Google Sheets en Panel Profesor)';
+        desc.textContent = 'Para guardar los votos en su Excel de Google Drive desde GitHub Pages, configure la URL en Acceso Profesor.';
+      }
+    }
+
+    async function syncVotesFromCloud(manual = false) {
+      updateConnectionBanner();
+      if (!appState.gasUrl || !appState.gasUrl.startsWith('http')) {
+        if (manual) showToast('Configure primero la URL de Google Apps Script en el Panel Profesor.', 'warning');
+        refreshAllViews();
+        return;
+      }
+
+      try {
+        const res = await fetch(appState.gasUrl);
+        const data = await res.json();
+        if (data && data.status === 'ok' && Array.isArray(data.votes)) {
+          appState.votes = data.votes;
+          localStorage.setItem('sondeo_votes_cache', JSON.stringify(appState.votes));
+          updateConnectionBanner();
+          refreshAllViews();
+          if (manual) showToast('Datos sincronizados correctamente con Google Drive.', 'success');
+        }
+      } catch (err) {
+        console.error('Error sincronizando con Google Sheets:', err);
+        if (manual) showToast('No se pudo conectar con Google Sheets. Verifique que el acceso esté en "Cualquier usuario".', 'error');
+      }
+    }
+
+    async function sendVoteToCloud(voteRecord) {
+      if (!appState.gasUrl || !appState.gasUrl.startsWith('http')) {
+        // Guardar localmente si aún no se conecta el Google Sheet
+        appState.votes.push(voteRecord);
+        localStorage.setItem('sondeo_votes_cache', JSON.stringify(appState.votes));
+        return { status: 'ok', localOnly: true };
+      }
+
+      const response = await fetch(appState.gasUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(voteRecord)
+      });
+      const result = await response.json();
+      if (result.status === 'ok') {
+        appState.votes.push(voteRecord);
+        localStorage.setItem('sondeo_votes_cache', JSON.stringify(appState.votes));
+      }
+      return result;
+    }
+
+    // ============================================================================
+    // NAVEGACIÓN ENTRE ROLES (ESTUDIANTE / PROFESOR)
+    // ============================================================================
+    function switchRole(role) {
+      const vStudent = document.getElementById('view-student');
+      const vProf = document.getElementById('view-professor');
+      const bStudent = document.getElementById('btn-tab-student');
+      const bProf = document.getElementById('btn-tab-professor');
+
+      if (role === 'student') {
+        vStudent.classList.remove('hidden');
+        vProf.classList.add('hidden');
+        bStudent.className = 'flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition shadow-md bg-brand-500 text-white ring-2 ring-brand-300';
+        bProf.className = 'flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition bg-white/10 hover:bg-white/20 text-white border border-white/20';
+      } else {
+        vStudent.classList.add('hidden');
+        vProf.classList.remove('hidden');
+        bProf.className = 'flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition shadow-md bg-brand-500 text-white ring-2 ring-brand-300';
+        bStudent.className = 'flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition bg-white/10 hover:bg-white/20 text-white border border-white/20';
+        if (appState.isProfessorAuthenticated) {
+          renderProfessorDashboard();
+        }
+      }
+    }
+
+    // ============================================================================
+    // LÓGICA DE ESTUDIANTES (VALIDACIÓN, 1 VEZ, 2 OPCIONES)
+    // ============================================================================
+    function normalizeText(str) {
+      return String(str || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim()
+        .toLowerCase();
+    }
+
+    async function handleStudentVerify(e) {
+      e.preventDefault();
+      const emailInput = normalizeText(document.getElementById('input-student-email').value);
+      const nameInput = normalizeText(document.getElementById('input-student-name').value);
+      const errorBox = document.getElementById('student-auth-error');
+      const errorText = document.getElementById('student-auth-error-text');
+
+      errorBox.classList.add('hidden');
+
+      // Buscar estudiante en la lista oficial
+      const matchedStudent = appState.students.find(st => {
+        const stEmail = normalizeText(st.correo);
+        if (stEmail !== emailInput) return false;
+        const fullName = normalizeText(`${st.nombres} ${st.apellidos} ${st.nombres}`);
+        // Verificar que al menos una palabra del nombre/apellido ingresado coincida
+        const tokens = nameInput.split(/\s+/).filter(t => t.length >= 2);
+        return tokens.length > 0 && tokens.some(t => fullName.includes(t));
+      });
+
+      if (!matchedStudent) {
+        errorText.textContent = 'Los datos ingresados no coinciden con la lista oficial de estudiantes inscritos. Verifique su correo electrónico y escriba al menos uno de sus nombres o apellidos.';
+        errorBox.classList.remove('hidden');
+        return;
+      }
+
+      // Sincronizar votos antes de verificar si ya participó
+      await syncVotesFromCloud(false);
+
+      appState.currentStudent = matchedStudent;
+      appState.selectedSlots = [];
+
+      // Verificar si el estudiante ya votó (en la nube o en localStorage)
+      const existingVote = appState.votes.find(v => normalizeText(v.correo) === normalizeText(matchedStudent.correo));
+
+      document.getElementById('student-login-card').classList.add('hidden');
+
+      if (existingVote) {
+        showAlreadyVotedView(matchedStudent, existingVote);
+      } else {
+        showVotingWorkspace(matchedStudent);
+      }
+    }
+
+    function showAlreadyVotedView(student, voteRecord) {
+      document.getElementById('student-voting-workspace').classList.add('hidden');
+      const card = document.getElementById('student-already-voted-card');
+      card.classList.remove('hidden');
+
+      document.getElementById('voted-student-greeting').textContent = `¡Hola, ${student.nombres} ${student.apellidos}!`;
+      document.getElementById('voted-student-meta').textContent = `${student.pais} • ${student.correo} • Ya has completado tu participación única.`;
+
+      const choicesContainer = document.getElementById('voted-student-choices');
+      choicesContainer.innerHTML = [
+        { num: 1, id: voteRecord.opcion1Id, text: voteRecord.opcion1Texto },
+        { num: 2, id: voteRecord.opcion2Id, text: voteRecord.opcion2Texto }
+      ].map(op => {
+        const [dStr, tStr] = (op.id || '').split('_');
+        let tzHtml = '';
+        if (dStr && tStr) {
+          const [h, m] = tStr.split(':').map(Number);
+          const tz = getMultiTimezoneSlotInfo(dStr, h, m);
+          tzHtml = `
+            <div class="mt-2 pt-2 border-t border-emerald-200/70 grid grid-cols-2 gap-1 text-[11px] text-slate-600">
+              <span>🇲🇽 CDMX: <strong>${tz.mx}</strong></span>
+              <span>🇨🇱 Chile: <strong>${tz.cl}</strong></span>
+              <span>🇵🇪 Perú/🇪🇨 Ec: <strong>${tz.pe}</strong></span>
+              <span>🇦🇷 Arg: <strong>${tz.ar}</strong></span>
+              <span>🇨🇷 C. Rica: <strong>${tz.cr}</strong></span>
+            </div>
+          `;
+        }
+        return `
+          <div class="p-4 rounded-xl bg-emerald-50/70 border border-emerald-200">
+            <div class="text-xs font-bold uppercase text-emerald-700 mb-1">Opción ${op.num} Seleccionada</div>
+            <div class="text-sm font-extrabold text-slate-900">${op.text}</div>
+            ${tzHtml}
+          </div>
+        `;
+      }).join('');
+
+      renderStudentResultsChart();
+    }
+
+    function showVotingWorkspace(student) {
+      document.getElementById('student-already-voted-card').classList.add('hidden');
+      const workspace = document.getElementById('student-voting-workspace');
+      workspace.classList.remove('hidden');
+
+      document.getElementById('active-student-country-badge').textContent = student.pais;
+      document.getElementById('active-student-name').textContent = `${student.nombres} ${student.apellidos}`;
+
+      updateSelectionCounterUI();
+      renderStudentSlotsGrid();
+    }
+
+    function resetStudentSession() {
+      appState.currentStudent = null;
+      appState.selectedSlots = [];
+      document.getElementById('student-login-card').classList.remove('hidden');
+      document.getElementById('student-already-voted-card').classList.add('hidden');
+      document.getElementById('student-voting-workspace').classList.add('hidden');
+      document.getElementById('student-auth-form').reset();
+    }
+
+    function renderStudentSlotsGrid() {
+      const container = document.getElementById('student-dates-grid');
+      const activeDates = appState.dates
+        .filter(d => d.active && d.date.startsWith(String(appState.year)))
+        .sort((a, b) => a.date.localeCompare(b.date));
+      const activeTimes = appState.timeBlocks
+        .filter(t => t.active)
+        .sort((a, b) => a.id.localeCompare(b.id));
+
+      if (activeDates.length === 0 || activeTimes.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-full p-8 text-center bg-slate-50 rounded-xl border border-dashed border-slate-300 text-slate-500 text-sm">
+            No hay fechas u horarios activos configurados para el año ${appState.year}. Consulte con el docente.
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = activeDates.map(dObj => {
+        const dateInfo = formatSpanishDateFull(dObj.date);
+
+        const slotsHtml = activeTimes.map(tObj => {
+          const slotId = `${dObj.date}_${tObj.id}`;
+          const isSelected = appState.selectedSlots.some(s => s.id === slotId);
+          const tz = getMultiTimezoneSlotInfo(dObj.date, tObj.startHour, tObj.startMin);
+          const labelText = `${dateInfo.full} | ${tz.mx} hrs (CDMX)`;
+
+          return `
+            <button type="button"
+              onclick="toggleSlotSelection('${slotId}', '${labelText.replace(/'/g, "\\'")}')"
+              class="slot-card w-full text-left p-3.5 rounded-xl border-2 transition ${
+                isSelected
+                  ? 'border-brand-600 bg-brand-50/90 shadow-md ring-2 ring-brand-200'
+                  : 'border-slate-200 bg-white hover:border-brand-400 hover:bg-slate-50/70'
+              }">
+              <div class="flex items-center justify-between gap-2 mb-2">
+                <span class="inline-flex items-center gap-1.5 text-xs font-extrabold ${isSelected ? 'text-brand-800' : 'text-slate-900'}">
+                  <i data-lucide="clock" class="w-3.5 h-3.5 text-brand-600"></i>
+                  🇲🇽 CDMX: ${tz.mx}
+                </span>
+                <span class="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
+                  isSelected ? 'bg-brand-600 text-white' : 'border border-slate-300 text-transparent'
+                }">✓</span>
+              </div>
+
+              <div class="space-y-1 text-[11px] text-slate-600 border-t border-slate-100 pt-2">
+                <div class="flex justify-between">
+                  <span class="font-medium">🇨🇱 Chile:</span>
+                  <span class="font-bold text-slate-800">${tz.cl}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="font-medium">🇵🇪 Perú / 🇪🇨 Ecu:</span>
+                  <span class="font-bold text-slate-800">${tz.pe}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="font-medium">🇦🇷 Argentina:</span>
+                  <span class="font-bold text-slate-800">${tz.ar}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="font-medium">🇨🇷 Costa Rica:</span>
+                  <span class="font-bold text-slate-800">${tz.cr}</span>
+                </div>
+              </div>
+            </button>
+          `;
+        }).join('');
+
+        return `
+          <div class="bg-slate-50/80 rounded-2xl border border-slate-200 p-4 flex flex-col gap-3">
+            <div class="pb-2.5 border-b border-slate-200">
+              <span class="text-[11px] font-extrabold uppercase tracking-wider text-brand-700">${dateInfo.weekday}</span>
+              <h4 class="text-sm font-extrabold text-slate-900">${dateInfo.full.split(', ')[1]}</h4>
+            </div>
+            <div class="space-y-2.5">
+              ${slotsHtml}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      lucide.createIcons();
+    }
+
+    function toggleSlotSelection(slotId, labelText) {
+      const idx = appState.selectedSlots.findIndex(s => s.id === slotId);
+      if (idx >= 0) {
+        appState.selectedSlots.splice(idx, 1);
+      } else {
+        if (appState.selectedSlots.length >= 2) {
+          showToast('Solo puede seleccionar un máximo de 2 opciones de horario. Desmarque una si desea cambiarla.', 'warning');
+          return;
+        }
+        appState.selectedSlots.push({ id: slotId, text: labelText });
+      }
+      updateSelectionCounterUI();
+      renderStudentSlotsGrid();
+    }
+
+    function updateSelectionCounterUI() {
+      const count = appState.selectedSlots.length;
+      document.getElementById('selection-count-badge').textContent = `${count} / 2`;
+      document.getElementById('btn-submit-vote').disabled = (count !== 2);
+
+      const pillsContainer = document.getElementById('selected-pills-container');
+      if (count === 0) {
+        pillsContainer.classList.add('hidden');
+        pillsContainer.innerHTML = '';
+      } else {
+        pillsContainer.classList.remove('hidden');
+        pillsContainer.innerHTML = appState.selectedSlots.map((s, i) => `
+          <span class="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-brand-100 text-brand-900 text-xs font-semibold">
+            <span>Opción ${i + 1}: ${s.text}</span>
+            <button type="button" onclick="toggleSlotSelection('${s.id}', '')" class="text-brand-700 hover:text-rose-600 font-bold">✕</button>
+          </span>
+        `).join('');
+      }
+    }
+
+    async function submitStudentVote() {
+      if (!appState.currentStudent || appState.selectedSlots.length !== 2) return;
+
+      const btn = document.getElementById('btn-submit-vote');
+      btn.disabled = true;
+      btn.innerHTML = `<span>Guardando selección...</span>`;
+
+      const voteRecord = {
+        timestamp: new Date().toISOString(),
+        pais: appState.currentStudent.pais,
+        correo: appState.currentStudent.correo.toLowerCase(),
+        nombreCompleto: `${appState.currentStudent.nombres} ${appState.currentStudent.apellidos}`,
+        opcion1Id: appState.selectedSlots[0].id,
+        opcion1Texto: appState.selectedSlots[0].text,
+        opcion2Id: appState.selectedSlots[1].id,
+        opcion2Texto: appState.selectedSlots[1].text,
+        anio: appState.year
+      };
+
+      try {
+        const result = await sendVoteToCloud(voteRecord);
+        if (result.status === 'duplicate') {
+          showToast('Ya existía un registro previo con su correo electrónico.', 'warning');
+          await syncVotesFromCloud(false);
+          const existing = appState.votes.find(v => normalizeText(v.correo) === normalizeText(voteRecord.correo));
+          showAlreadyVotedView(appState.currentStudent, existing || voteRecord);
+          return;
+        }
+
+        showToast('¡Sus 2 opciones de horario han sido registradas exitosamente!', 'success');
+        updateConnectionBanner();
+        showAlreadyVotedView(appState.currentStudent, voteRecord);
+      } catch (err) {
+        console.error(err);
+        showToast('Ocurrió un error al enviar su voto. Verifique su conexión a internet.', 'error');
+        btn.disabled = false;
+        btn.innerHTML = `<i data-lucide="send" class="w-4 h-4"></i><span>Confirmar Mis 2 Opciones</span>`;
+        lucide.createIcons();
+      }
+    }
+
+    // ============================================================================
+    // CONTEO DE VOTOS Y GRÁFICAS (CHART.JS)
+    // ============================================================================
+    function aggregateSlotCounts() {
+      const countsMap = {};
+
+      // Inicializar con todos los slots activos para que aparezcan en la gráfica
+      const activeDates = appState.dates
+        .filter(d => d.active && d.date.startsWith(String(appState.year)))
+        .sort((a, b) => a.date.localeCompare(b.date));
+      const activeTimes = appState.timeBlocks
+        .filter(t => t.active)
+        .sort((a, b) => a.id.localeCompare(b.id));
+
+      activeDates.forEach(dObj => {
+        const dateInfo = formatSpanishDateFull(dObj.date);
+        activeTimes.forEach(tObj => {
+          const slotId = `${dObj.date}_${tObj.id}`;
+          const tz = getMultiTimezoneSlotInfo(dObj.date, tObj.startHour, tObj.startMin);
+          countsMap[slotId] = {
+            id: slotId,
+            dateStr: dObj.date,
+            shortLabel: `${dateInfo.weekday.slice(0, 3)} ${dObj.date.slice(5)} (${tz.mx} CDMX)`,
+            fullLabel: `${dateInfo.full} | ${tz.mx} CDMX`,
+            tzSummary: `🇨🇱 ${tz.cl} | 🇵🇪🇪🇨 ${tz.pe} | 🇦🇷 ${tz.ar} | 🇨🇷 ${tz.cr}`,
+            count: 0,
+            voters: []
+          };
+        });
+      });
+
+      // Sumar votos registrados
+      appState.votes.forEach(v => {
+        [v.opcion1Id, v.opcion2Id].forEach(opId => {
+          if (!opId) return;
+          if (!countsMap[opId]) {
+            const [dStr, tStr] = opId.split('_');
+            countsMap[opId] = {
+              id: opId,
+              dateStr: dStr || '',
+              shortLabel: `${dStr} (${tStr} CDMX)`,
+              fullLabel: `${dStr} ${tStr} CDMX`,
+              tzSummary: '',
+              count: 0,
+              voters: []
+            };
+          }
+          countsMap[opId].count += 1;
+          countsMap[opId].voters.push(`${v.nombreCompleto} (${v.pais})`);
+        });
+      });
+
+      return Object.values(countsMap);
+    }
+
+    function renderStudentResultsChart() {
+      const ctx = document.getElementById('studentResultsChart');
+      if (!ctx) return;
+
+      const items = aggregateSlotCounts();
+      const labels = items.map(i => i.shortLabel);
+      const dataValues = items.map(i => i.count);
+      const maxVal = Math.max(...dataValues, 0);
+
+      document.getElementById('student-chart-total-badge').textContent =
+        `${appState.votes.length} estudiante(s) han votado`;
+
+      if (studentChartInstance) {
+        studentChartInstance.destroy();
+      }
+
+      studentChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'N° de Estudiantes Disponibles',
+            data: dataValues,
+            backgroundColor: dataValues.map(v => (v > 0 && v === maxVal) ? '#0d9488' : '#38bdf8'),
+            borderRadius: 8,
+            borderSkipped: false
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                afterLabel: (context) => {
+                  const item = items[context.dataIndex];
+                  return item && item.tzSummary ? item.tzSummary : '';
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { stepSize: 1, precision: 0 },
+              title: { display: true, text: 'Cantidad de Personas' }
+            },
+            x: {
+              ticks: { maxRotation: 45, minRotation: 25, font: { size: 11 } }
+            }
+          }
+        }
+      });
+    }
+
+    // ============================================================================
+    // LÓGICA DEL PROFESOR (AUTENTICACIÓN, CONFIGURACIÓN, RESULTADOS)
+    // ============================================================================
+    function handleProfessorLogin(e) {
+      e.preventDefault();
+      const pwd = document.getElementById('prof-password-input').value;
+      const err = document.getElementById('prof-login-error');
+
+      if (pwd === appState.profPassword) {
+        err.classList.add('hidden');
+        appState.isProfessorAuthenticated = true;
+        document.getElementById('professor-login-card').classList.add('hidden');
+        document.getElementById('professor-dashboard').classList.remove('hidden');
+        renderProfessorDashboard();
+      } else {
+        err.classList.remove('hidden');
+      }
+    }
+
+    function logoutProfessor() {
+      appState.isProfessorAuthenticated = false;
+      document.getElementById('professor-dashboard').classList.add('hidden');
+      document.getElementById('professor-login-card').classList.remove('hidden');
+      document.getElementById('prof-password-input').value = '';
+    }
+
+    function switchProfTab(tabName) {
+      const tabs = ['results', 'config', 'sheets', 'students'];
+      tabs.forEach(t => {
+        const btn = document.getElementById(`ptab-${t}`);
+        const panel = document.getElementById(`prof-panel-${t}`);
+        if (t === tabName) {
+          btn.className = 'px-4 py-2 rounded-xl text-xs font-bold bg-navy-900 text-white transition';
+          panel.classList.remove('hidden');
+        } else {
+          btn.className = 'px-4 py-2 rounded-xl text-xs font-bold bg-white text-slate-600 hover:bg-slate-100 border border-slate-200 transition';
+          panel.classList.add('hidden');
+        }
+      });
+      if (tabName === 'results') renderProfessorResultsSection();
+      if (tabName === 'config') renderProfessorConfigSection();
+      if (tabName === 'sheets') document.getElementById('cfg-gas-url').value = appState.gasUrl || '';
+      if (tabName === 'students') renderWhitelistTable();
+    }
+
+    function renderProfessorDashboard() {
+      renderProfessorResultsSection();
+      renderProfessorConfigSection();
+      renderWhitelistTable();
+      document.getElementById('cfg-gas-url').value = appState.gasUrl || '';
+    }
+
+    function renderProfessorResultsSection() {
+      const items = aggregateSlotCounts();
+      const sortedItems = [...items].sort((a, b) => b.count - a.count);
+
+      // KPIs
+      document.getElementById('kpi-voted-count').textContent = appState.votes.length;
+      document.getElementById('kpi-total-students').textContent = `/ ${appState.students.length} registrados`;
+      document.getElementById('kpi-total-selections').textContent = appState.votes.length * 2;
+
+      const topCount = sortedItems.length > 0 ? sortedItems[0].count : 0;
+      if (topCount > 0) {
+        const winners = sortedItems.filter(i => i.count === topCount);
+        document.getElementById('kpi-top-slot').innerHTML = winners
+          .map(w => `<span class="inline-block bg-brand-50 text-brand-800 border border-brand-200 px-2.5 py-1 rounded-lg mr-1.5 mb-1">${w.fullLabel} (${w.count} votos)</span>`)
+          .join('');
+      } else {
+        document.getElementById('kpi-top-slot').textContent = 'Aún sin votos registrados';
+      }
+
+      // Gráfica Profesor
+      const ctx = document.getElementById('profResultsChart');
+      if (ctx) {
+        if (profChartInstance) profChartInstance.destroy();
+        profChartInstance = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: items.map(i => i.shortLabel),
+            datasets: [{
+              label: 'Selecciones de Estudiantes',
+              data: items.map(i => i.count),
+              backgroundColor: items.map(i => (i.count > 0 && i.count === topCount) ? '#0f766e' : '#0284c7'),
+              borderRadius: 8
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  afterLabel: (context) => {
+                    const item = items[context.dataIndex];
+                    return item.voters.length ? `Votantes: ${item.voters.join(', ')}` : 'Sin votos aún';
+                  }
+                }
+              }
+            },
+            scales: {
+              y: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 } },
+              x: { ticks: { maxRotation: 45, minRotation: 25, font: { size: 11 } } }
+            }
+          }
+        });
+      }
+
+      // Tabla Ranking de Horarios
+      const rankingTbody = document.getElementById('prof-slots-ranking-tbody');
+      rankingTbody.innerHTML = sortedItems.map(item => {
+        const isWinner = item.count > 0 && item.count === topCount;
+        return `
+          <tr class="${isWinner ? 'bg-brand-50/60 font-semibold' : ''}">
+            <td class="py-3 px-4 text-slate-800">${item.fullLabel.split(' | ')[0]}</td>
+            <td class="py-3 px-4 font-bold text-slate-900">${item.fullLabel.split(' | ')[1] || item.id}</td>
+            <td class="py-3 px-4 text-[11px] text-slate-500">${item.tzSummary}</td>
+            <td class="py-3 px-4 text-center">
+              <span class="inline-flex items-center justify-center px-2.5 py-1 rounded-full text-xs font-extrabold ${
+                isWinner ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-700'
+              }">${item.count}</span>
+            </td>
+            <td class="py-3 px-4 text-slate-600">${item.voters.length ? item.voters.join(', ') : '<span class="text-slate-400 italic">Ninguno</span>'}</td>
+          </tr>
+        `;
+      }).join('');
+
+      // Tabla Estado de cada Estudiante
+      const respTbody = document.getElementById('prof-students-responses-tbody');
+      respTbody.innerHTML = appState.students.map(st => {
+        const vote = appState.votes.find(v => normalizeText(v.correo) === normalizeText(st.correo));
+        return `
+          <tr>
+            <td class="py-3 px-4">
+              ${vote
+                ? '<span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[11px]">✓ Votó</span>'
+                : '<span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-semibold text-[11px]">Pendiente</span>'}
+            </td>
+            <td class="py-3 px-4 font-semibold text-slate-700">${st.pais}</td>
+            <td class="py-3 px-4 font-bold text-slate-900">${st.apellidos}, ${st.nombres}</td>
+            <td class="py-3 px-4 text-slate-500">${st.correo}</td>
+            <td class="py-3 px-4 text-brand-800 font-medium">${vote ? vote.opcion1Texto : '-'}</td>
+            <td class="py-3 px-4 text-brand-800 font-medium">${vote ? vote.opcion2Texto : '-'}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // ============================================================================
+    // CONFIGURACIÓN DE AÑO, FECHAS (LUN-DOM) Y FRANJAS DE 2 HORAS
+    // ============================================================================
+    function renderProfessorConfigSection() {
+      document.getElementById('cfg-year').value = appState.year;
+      document.getElementById('header-year-badge').textContent = appState.year;
+
+      // Renderizar lista de fechas
+      const datesContainer = document.getElementById('cfg-dates-list');
+      const sortedDates = [...appState.dates].sort((a, b) => a.date.localeCompare(b.date));
+
+      datesContainer.innerHTML = sortedDates.map((dObj, index) => {
+        const info = formatSpanishDateFull(dObj.date);
+        return `
+          <div class="flex items-center justify-between p-3 rounded-xl border ${dObj.active ? 'bg-brand-50/50 border-brand-300' : 'bg-slate-50 border-slate-200 opacity-70'}">
+            <label class="flex items-center gap-2.5 cursor-pointer select-none">
+              <input type="checkbox" ${dObj.active ? 'checked' : ''} onchange="toggleDateActive('${dObj.date}')"
+                class="w-4 h-4 text-brand-600 rounded focus:ring-brand-500" />
+              <div>
+                <div class="text-xs font-extrabold text-slate-900">${info.weekday}</div>
+                <div class="text-[11px] text-slate-600">${dObj.date}</div>
+              </div>
+            </label>
+            <button type="button" onclick="removeDate('${dObj.date}')" class="text-slate-400 hover:text-rose-600 p-1" title="Eliminar fecha">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        `;
+      }).join('');
+
+      // Renderizar franjas de 2 horas
+      const timesContainer = document.getElementById('cfg-times-list');
+      const sortedTimes = [...appState.timeBlocks].sort((a, b) => a.id.localeCompare(b.id));
+
+      timesContainer.innerHTML = sortedTimes.map(tObj => {
+        const endH = (tObj.startHour + 2) % 24;
+        const endStr = `${String(endH).padStart(2, '0')}:${String(tObj.startMin).padStart(2, '0')}`;
+        return `
+          <div class="flex items-center justify-between p-3 rounded-xl border ${tObj.active ? 'bg-brand-50/50 border-brand-300' : 'bg-slate-50 border-slate-200 opacity-70'}">
+            <label class="flex items-center gap-2.5 cursor-pointer select-none">
+              <input type="checkbox" ${tObj.active ? 'checked' : ''} onchange="toggleTimeActive('${tObj.id}')"
+                class="w-4 h-4 text-brand-600 rounded focus:ring-brand-500" />
+              <div>
+                <div class="text-xs font-extrabold text-slate-900">${tObj.id} - ${endStr} hrs</div>
+                <div class="text-[10px] text-slate-500">CDMX (Duración: 2h)</div>
+              </div>
+            </label>
+            <button type="button" onclick="removeTimeBlock('${tObj.id}')" class="text-slate-400 hover:text-rose-600 p-1" title="Eliminar bloque">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        `;
+      }).join('');
+
+      lucide.createIcons();
+    }
+
+    function handleYearChange() {
+      const newYear = parseInt(document.getElementById('cfg-year').value, 10);
+      if (!newYear || newYear < 2025 || newYear > 2099) return;
+      appState.year = newYear;
+      // Actualizar el año en las fechas configuradas manteniendo mes y día
+      appState.dates = appState.dates.map(d => {
+        const rest = d.date.slice(4); // -MM-DD
+        return { ...d, date: `${newYear}${rest}` };
+      });
+      renderProfessorConfigSection();
+    }
+
+    function addSpecificDate() {
+      const val = document.getElementById('cfg-new-date').value;
+      if (!val) return;
+      if (!appState.dates.some(d => d.date === val)) {
+        appState.dates.push({ date: val, active: true });
+        appState.year = parseInt(val.slice(0, 4), 10);
+        renderProfessorConfigSection();
+      } else {
+        showToast('Esa fecha ya está en la lista.', 'warning');
+      }
+    }
+
+    function generateWeekDates() {
+      const startVal = document.getElementById('cfg-week-start').value;
+      if (!startVal) {
+        showToast('Seleccione una fecha de inicio para generar los 7 días (Lunes a Domingo).', 'warning');
+        return;
+      }
+      const [y, m, d] = startVal.split('-').map(Number);
+      const base = new Date(y, m - 1, d);
+      appState.year = y;
+      for (let i = 0; i < 7; i++) {
+        const cur = new Date(base);
+        cur.setDate(base.getDate() + i);
+        const iso = `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}-${String(cur.getDate()).padStart(2, '0')}`;
+        if (!appState.dates.some(item => item.date === iso)) {
+          appState.dates.push({ date: iso, active: true });
+        }
+      }
+      renderProfessorConfigSection();
+      showToast('Se agregaron los 7 días a la configuración.', 'success');
+    }
+
+    function toggleDateActive(dateStr) {
+      const item = appState.dates.find(d => d.date === dateStr);
+      if (item) item.active = !item.active;
+      renderProfessorConfigSection();
+    }
+
+    function toggleAllDates(state) {
+      appState.dates.forEach(d => d.active = state);
+      renderProfessorConfigSection();
+    }
+
+    function removeDate(dateStr) {
+      appState.dates = appState.dates.filter(d => d.date !== dateStr);
+      renderProfessorConfigSection();
+    }
+
+    function toggleTimeActive(timeId) {
+      const item = appState.timeBlocks.find(t => t.id === timeId);
+      if (item) item.active = !item.active;
+      renderProfessorConfigSection();
+    }
+
+    function addCustomTimeBlock() {
+      const val = document.getElementById('cfg-custom-start-time').value;
+      if (!val) return;
+      const [h, m] = val.split(':').map(Number);
+      if (!appState.timeBlocks.some(t => t.id === val)) {
+        appState.timeBlocks.push({ id: val, startHour: h, startMin: m, active: true });
+        renderProfessorConfigSection();
+      } else {
+        showToast('Ese bloque horario ya existe.', 'warning');
+      }
+    }
+
+    function removeTimeBlock(timeId) {
+      appState.timeBlocks = appState.timeBlocks.filter(t => t.id !== timeId);
+      renderProfessorConfigSection();
+    }
+
+    function saveProfessorConfig() {
+      localStorage.setItem('sondeo_year', String(appState.year));
+      localStorage.setItem('sondeo_dates', JSON.stringify(appState.dates));
+      localStorage.setItem('sondeo_timeblocks', JSON.stringify(appState.timeBlocks));
+      document.getElementById('header-year-badge').textContent = appState.year;
+      showToast('Configuración de año, fechas y horarios guardada correctamente.', 'success');
+    }
+
+    // ============================================================================
+    // GESTIÓN DE GOOGLE SHEETS URL, CONTRASEÑA Y LISTA DE ESTUDIANTES
+    // ============================================================================
+    function saveGasUrl() {
+      const url = document.getElementById('cfg-gas-url').value.trim();
+      appState.gasUrl = url;
+      localStorage.setItem('sondeo_gas_url', url);
+      syncVotesFromCloud(true);
+    }
+
+    function updateProfessorPassword() {
+      const newPass = document.getElementById('cfg-new-prof-pass').value.trim();
+      if (newPass.length < 4) {
+        showToast('La contraseña debe tener al menos 4 caracteres.', 'warning');
+        return;
+      }
+      appState.profPassword = newPass;
+      localStorage.setItem('sondeo_prof_pass', newPass);
+      document.getElementById('cfg-new-prof-pass').value = '';
+      showToast('Contraseña de profesor actualizada correctamente.', 'success');
+    }
+
+    function renderWhitelistTable() {
+      const tbody = document.getElementById('whitelist-tbody');
+      tbody.innerHTML = appState.students.map((st, i) => `
+        <tr>
+          <td class="py-2.5 px-3 text-slate-400 font-mono">${i + 1}</td>
+          <td class="py-2.5 px-3 font-bold text-slate-700">${st.pais}</td>
+          <td class="py-2.5 px-3 text-slate-800">${st.apellidos}</td>
+          <td class="py-2.5 px-3 text-slate-800">${st.nombres}</td>
+          <td class="py-2.5 px-3 text-slate-500">${st.correo}</td>
+          <td class="py-2.5 px-3 text-right">
+            <button onclick="removeStudentFromWhitelist(${i})" class="text-rose-500 hover:text-rose-700 font-semibold">Eliminar</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function addStudentToWhitelist(e) {
+      e.preventDefault();
+      const pais = document.getElementById('new-st-country').value.trim().toUpperCase();
+      const apellidos = document.getElementById('new-st-last').value.trim().toUpperCase();
+      const nombres = document.getElementById('new-st-first').value.trim().toUpperCase();
+      const correo = document.getElementById('new-st-email').value.trim().toLowerCase();
+
+      appState.students.push({ pais, apellidos, nombres, correo });
+      localStorage.setItem('sondeo_students', JSON.stringify(appState.students));
+      e.target.reset();
+      renderWhitelistTable();
+      showToast('Estudiante agregado a la lista autorizada.', 'success');
+    }
+
+    function removeStudentFromWhitelist(index) {
+      appState.students.splice(index, 1);
+      localStorage.setItem('sondeo_students', JSON.stringify(appState.students));
+      renderWhitelistTable();
+    }
+
+    function clearDemoLocalVotes() {
+      appState.votes = [];
+      localStorage.removeItem('sondeo_votes_cache');
+      refreshAllViews();
+      showToast('Caché local limpiada. Si tiene Google Sheets conectado, presione "Actualizar Datos".', 'info');
+    }
+
+    // Exportar resultados a archivo CSV compatible con Excel
+    function exportResultsCSV() {
+      const headers = ['Fecha Registro', 'País', 'Correo', 'Nombre Completo', 'Opción 1', 'Opción 2', 'Año'];
+      const rows = appState.votes.map(v => [
+        v.timestamp || '',
+        v.pais || '',
+        v.correo || '',
+        `"${(v.nombreCompleto || '').replace(/"/g, '""')}"`,
+        `"${(v.opcion1Texto || '').replace(/"/g, '""')}"`,
+        `"${(v.opcion2Texto || '').replace(/"/g, '""')}"`,
+        v.anio || appState.year
+      ]);
+
+      const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Resultados_Sondeo_Sesion_${appState.year}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // Modal de Google Apps Script
+    function openGasModal() {
+      const modal = document.getElementById('gas-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeGasModal() {
+      const modal = document.getElementById('gas-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function copyGasCode() {
+      const textarea = document.getElementById('gas-code-area');
+      textarea.select();
+      document.execCommand('copy');
+      showToast('Código de Google Apps Script copiado al portapapeles.', 'success');
+    }
+
+    function refreshAllViews() {
+      if (appState.isProfessorAuthenticated) {
+        renderProfessorResultsSection();
+      }
+      if (appState.currentStudent) {
+        const existingVote = appState.votes.find(v => normalizeText(v.correo) === normalizeText(appState.currentStudent.correo));
+        if (existingVote) {
+          showAlreadyVotedView(appState.currentStudent, existingVote);
+        }
+      }
+    }
+
+    // ============================================================================
+    // INICIALIZACIÓN
+    // ============================================================================
+    window.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      document.getElementById('header-year-badge').textContent = appState.year;
+      updateLiveClocks();
+      setInterval(updateLiveClocks, 1000);
+      syncVotesFromCloud(false);
+    });
+  </script>
+</body>
+</html>
